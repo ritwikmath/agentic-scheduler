@@ -1,12 +1,24 @@
-import sqlite3
 import asyncio
+import sqlite3
+from pathlib import Path
+import aiohttp
 
-
-DB_PATH = "scheduler.db"
+DB_PATH = Path(__file__).resolve().parent.parent.parent / "scheduler.db"
 
 
 async def process_query(id: int, query: str):
-    print(id, query)
+    url = "http://localhost:8000/chat"
+
+    payload = {
+        "message": query
+    }
+
+    async with aiohttp.ClientSession() as session, session.post(
+        url,
+        json=payload,
+    ) as response:
+        print("Status:", response.status)
+        print("Response:", await response.text())
 
 
 async def worker(queue: asyncio.Queue) -> str:
@@ -20,11 +32,12 @@ async def worker(queue: asyncio.Queue) -> str:
         finally:
             queue.task_done()
 
+
 def fetch_pending_queries():
     conn = sqlite3.connect(DB_PATH)
     try:
         cur = conn.cursor()
-        res = cur.execute("SELECT task, id FROM task WHERE schedule_at < datetime('now') and status = 'pending'")
+        res = cur.execute("SELECT id, task FROM task WHERE schedule_at < datetime('now') and status = 'pending'")
         rows = res.fetchall()
         return rows
     except Exception as ex:
