@@ -1,0 +1,99 @@
+from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from langchain.agents import create_agent
+from dotenv import load_dotenv
+from langchain.tools import tool
+from datetime import datetime
+import sqlite3
+from contextlib import asynccontextmanager
+from crontab import CronTab
+
+load_dotenv()
+
+DB_PATH = "scheduler.db"
+
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS task (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task TEXT NOT NULL,
+                schedule_at TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@tool
+def schedule_task(task: str, schedule_at: datetime):
+    """Schedules a customer request to be exected later.
+
+    Use this tool when user asks
+    - Scheudle a query to be executed later
+    - User wants a information at specific time in future
+    - User wants delay the response
+
+    Do not use this tool when
+    - User wants something immediate
+    - User does not want to deplay response
+
+    args:
+    - task: a string containing stripped down version of user query without noise
+    - schedule_at: date and time suitable for SQL database DateTime column
+
+    Returns:
+    - true if schedule is successful
+    - false if error occured during schedule
+    """
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute(
+            "INSERT INTO task (task, schedule_at) VALUES (?, ?)",
+            (task, schedule_at.isoformat()),
+        )
+        conn.commit()
+        return True
+    except Exception as ex:
+        print(ex)
+        return False
+    finally:
+        conn.close()
+
+
+agent = create_agent(
+    model="openai:gpt-4o", tools=[schedule_task]
+)
+
+
+class Message(BaseModel):
+    message: str
+
+@app.post("/chat")
+async def chat(input: Message):
+    user_input = input.message.strip()
+
+    async def event_stream():
+        async for chunk in agent.astream({"messages": [{"role": "user", "content": user_input}]}):
+            for update in chunk.values():
+                message = update["messages"][-1]
+                yield f"{message.content}\n"
+
+    return StreamingResponse(event_stream(), media_type="text/plain")
