@@ -48,5 +48,6 @@ async def main():
     for w in workers:
         w.cancel()
 
+
 if __name__ == "__main__":
     asyncio.run(main())

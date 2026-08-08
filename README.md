@@ -20,26 +20,49 @@ in a local SQLite database instead of responding immediately.
 
 ## Setup
 
+This project uses [uv](https://docs.astral.sh/uv/) for virtual environment and
+package management.
+
 1. Clone the repo and move into it.
 
-2. Create and activate a virtual environment:
+2. Install `uv` if you don't already have it:
 
    ```bash
-   python -m venv .venv
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+3. Create the virtual environment and install dependencies:
+
+   ```bash
+   uv sync
+   ```
+
+   This creates a `.venv` (using the Python version pinned in `.python-version`)
+   and installs everything listed in `requirements.txt` / `pyproject.toml`.
+
+4. Activate the virtual environment:
+
+   ```bash
    source .venv/bin/activate
    ```
 
-3. Install dependencies:
+   Alternatively, skip activation and prefix commands with `uv run` (e.g.
+   `uv run fastapi dev src/agentic_rag_query_scheduler_poc/main.py`).
 
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Create a `.env` file in the project root with your OpenAI credentials:
+5. Create a `.env` file in the project root with your OpenAI credentials:
 
    ```
    OPENAI_API_KEY=sk-...
    ```
+
+### Adding packages
+
+Use `uv add <package>` instead of `pip install` so new dependencies are
+recorded in `pyproject.toml`/`requirements.txt`:
+
+```bash
+uv add <package>
+```
 
 ## Running the server
 
