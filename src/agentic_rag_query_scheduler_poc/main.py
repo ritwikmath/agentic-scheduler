@@ -1,13 +1,14 @@
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from langchain.agents import create_agent
-from dotenv import load_dotenv
-from langchain.tools import tool
-from datetime import datetime, UTC
 import sqlite3
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
+
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
+from langchain.agents import create_agent
+from langchain.tools import tool
 from langchain_core.prompts import PromptTemplate
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -72,7 +73,7 @@ def schedule_task(task: str, schedule_at: datetime):
         )
         conn.commit()
         return True
-    except Exception as ex:
+    except sqlite3.Error as ex:
         print(ex)
         return False
     finally:

@@ -1,6 +1,7 @@
 import asyncio
 import sqlite3
 from pathlib import Path
+
 import aiohttp
 
 DB_PATH = Path(__file__).resolve().parent.parent.parent / "scheduler.db"
@@ -27,7 +28,7 @@ async def worker(queue: asyncio.Queue) -> str:
         try:
             id, query = item
             await process_query(id, query)
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001 - worker must stay alive regardless of task failure reason
             print(ex)
         finally:
             queue.task_done()
@@ -40,7 +41,7 @@ def fetch_pending_queries():
         res = cur.execute("SELECT id, task FROM task WHERE schedule_at < datetime('now') and status = 'pending'")
         rows = res.fetchall()
         return rows
-    except Exception as ex:
+    except sqlite3.Error as ex:
         print(ex)
     finally:
         conn.close()
