@@ -4,10 +4,10 @@ from pydantic import BaseModel
 from langchain.agents import create_agent
 from dotenv import load_dotenv
 from langchain.tools import tool
-from datetime import datetime
+from datetime import datetime, UTC
 import sqlite3
 from contextlib import asynccontextmanager
-from crontab import CronTab
+from langchain_core.prompts import PromptTemplate
 
 load_dotenv()
 
@@ -79,8 +79,12 @@ def schedule_task(task: str, schedule_at: datetime):
         conn.close()
 
 
+prompt = PromptTemplate.from_template("You are a helpful assistant. Current date and time is {curr_date_time}")
+
+system_prompt = prompt.format(curr_date_time=(datetime.now(UTC)).strftime("%Y-%m-%d %H:%M:%S"))
+
 agent = create_agent(
-    model="openai:gpt-4o", tools=[schedule_task]
+    model="openai:gpt-4o", tools=[schedule_task], system_prompt=system_prompt
 )
 
 

@@ -1,16 +1,48 @@
 import sqlite3
-from itertools import batched
+import asyncio
+
 
 DB_PATH = "scheduler.db"
 
-conn = sqlite3.connect(DB_PATH)
 
-cur = conn.cursor()
+async def process_query(id: int, query: str):
+    print(id, query)
 
-res = cur.execute("SELECT task FROM task WHERE schedule_at < datetime('now') and status = 'pending'")
 
-rows = res.fetchall()
+async def worker(queue: asyncio.Queue) -> str:
+    while True:
+        item = await queue.get()
+        try:
+            id, query = item
+            await process_query(id, query)
+        except Exception as ex:
+            print(ex)
+        finally:
+            queue.task_done()
 
-for batch in batched(rows, 10):
-    for row in list(batch):
-        print(row[0])
+
+async def main():
+    queue = asyncio.Queue()
+
+    workers = [asyncio.create_task(worker(queue)) for _ in range(5)]
+
+    conn = sqlite3.connect(DB_PATH)
+
+    cur = conn.cursor()
+
+    res = cur.execute("SELECT task, id FROM task WHERE schedule_at < datetime('now') and status = 'pending'")
+
+    rows = res.fetchall()
+
+    print(len(rows))
+
+    for row in rows:
+        await queue.put(row)
+
+    await queue.join()
+
+    for w in workers:
+        w.cancel()
+
+if __name__ == "__main__":
+    asyncio.run(main())
