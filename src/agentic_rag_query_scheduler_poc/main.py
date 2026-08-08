@@ -24,7 +24,8 @@ def init_db():
                 task TEXT NOT NULL,
                 schedule_at TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'pending',
-                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                result TEXT
             )
             """
         )
