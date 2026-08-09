@@ -18,8 +18,17 @@ async def process_query(id: int, query: str):
         url,
         json=payload,
     ) as response:
-        print("Status:", response.status)
-        print("Response:", await response.text())
+        response_text = await response.text()
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            cur = conn.cursor()
+            cur.execute("UPDATE task SET status = 'completed', result = ? WHERE id = ?", (response_text, id))
+            conn.commit()
+        except sqlite3.Error as ex:
+            print(ex)
+        finally:
+            conn.close()
+
 
 
 async def worker(queue: asyncio.Queue) -> str:
