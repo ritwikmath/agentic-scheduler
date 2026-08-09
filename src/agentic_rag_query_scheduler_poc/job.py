@@ -1,14 +1,15 @@
 import asyncio
+import os
 import sqlite3
 from pathlib import Path
 
 import aiohttp
 
-DB_PATH = Path(__file__).resolve().parent.parent.parent / "scheduler.db"
+DB_PATH = Path(__file__).resolve().parent.parent.parent / os.getenv("DB_NAME", "scheduler.db")
 
 
 async def process_query(id: int, query: str):
-    url = "http://localhost:8000/chat"
+    url = f"{os.getenv("API_URL", "http://localhost:8000")}/chat"
 
     payload = {
         "message": query

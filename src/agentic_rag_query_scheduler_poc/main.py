@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -12,7 +13,7 @@ from pydantic import BaseModel
 
 load_dotenv()
 
-DB_PATH = "scheduler.db"
+DB_PATH = os.getenv("DB_NAME", "scheduler.db")
 
 
 def init_db():
